@@ -42,17 +42,50 @@ void setup() {
 void loop() {
   readRFID();
 
+//  Serial.println(analogRead(A0));
+
   if(exec) {
     Serial.println("=====execute=====");
-    for(int i=0;i<=commandIndex;i++) {
-      delay(1500);
-      actionCardContent(i);
+    int repeatIndex = searchIndexOf(COMMAND, "repeat");
+    int numberIndex = repeatIndex + 1;
+    int breakIndex = searchIndexOf(COMMAND, "break");
+
+    String finalArray[repeatIndex + (COMMAND[numberIndex].toInt() * (breakIndex - numberIndex - 1)) + (commandIndex - breakIndex - 1)];
+    int tempIndex4Repeat = repeatIndex;
+
+    if(breakIndex != 0) {
+      for(int i = 0; i < repeatIndex; i++) {
+        finalArray[i] = COMMAND[i];
+      }
+
+      for(int i = 0; i < COMMAND[numberIndex].toInt(); i++) {
+        for(int j = numberIndex + 1; j < breakIndex; j++) {
+          finalArray[tempIndex4Repeat] = COMMAND[j];
+          tempIndex4Repeat++;
+        }
+      }
+  
+      for(int i = breakIndex + 1; i < commandIndex; i++) {
+        finalArray[tempIndex4Repeat] = COMMAND[i];
+        tempIndex4Repeat++;
+      }
+
+      for(int i = 0; i < tempIndex4Repeat; i++) {
+        Serial.print(finalArray[i]);
+        Serial.print(", ");
+      }
+      Serial.println("");
+    } else {
+      for(int i = 0; i < commandIndex; i++) {
+        finalArray[i] = COMMAND[i];
+        Serial.print(finalArray[i]);
+        Serial.print(", ");
+      }
+      Serial.println(""); 
     }
-    commandIndex = 0;
-    exec = false;
+
+    actionCardContent(finalArray, sizeof(finalArray)/sizeof(finalArray[0]));
   }
-//  int line = analogRead(LINE_FOLLOW_L);
-//  Serial.println(line);
 }
 
 //*****************************************************************************************//
@@ -133,37 +166,35 @@ void readRFID() {
   mfrc522.PCD_StopCrypto1();
 }
 
-void actionCardContent(int index) {
-  if(COMMAND[index] == "forward") {
-    Serial.println("forward done");
-    commandLineFollow();
-  } else if(COMMAND[index] == "left") {
-    Serial.println("left done");
-    commandTurnLeft();
-  } else if(COMMAND[index] == "right") {
-    Serial.println("right done");
-    commandTurnRight();
-  } else if(COMMAND[index] == "repeat") {
-    Serial.println("repeat done");
-  } else if(COMMAND[index] == "break") {
-    Serial.println("break done");
-  } else if(COMMAND[index] == "2") {
-    Serial.println("2 done");
-  } else if(COMMAND[index] == "3") {
-    Serial.println("3 done");
-  } else if(COMMAND[index] == "4") {
-    Serial.println("4 done");
-  } else if(COMMAND[index] == "5") {
-    Serial.println("5 done");
-  } else if(COMMAND[index] == "action") {
-    Serial.println("=====finish=====");
-    Serial.println(F("Read personal data on a MIFARE PICC:"));  
+void actionCardContent(String command[], int commandLength) {
+  Serial.println(commandLength);
+  for(int i = 0; i < commandLength; i++) {
+    if(command[i] == "forward") {
+      Serial.println("forward done");
+      commandLineFollow();
+    } else if(command[i] == "left") {
+      Serial.println("left done");
+      commandTurnLeft();
+    } else if(command[i] == "right") {
+      Serial.println("right done");
+      commandTurnRight();
+    } else if(command[i] == "action") {
+      Serial.println("=====finish=====");
+      Serial.println(F("Read personal data on a MIFARE PICC:"));  
+    }
+  
+    if(command[i] != "action") {
+      tone(2, 400, 500);    
+    }
+
+    delay(1000);
   }
 
-  if(COMMAND[index] != "action") {
-    tone(2, 400, 500);    
+  for(int i = 0; i < commandIndex; i++) {
+    COMMAND[i] = "";
   }
-  COMMAND[index] = "";
+  commandIndex = 0;
+  exec = false;
 }
 
 void forward(int speed) {
@@ -191,12 +222,12 @@ void lineFollow(int speed) {
   int leftLine = analogRead(LINE_FOLLOW_L);
   int rightLine = analogRead(LINE_FOLLOW_R);
   
-  if(rightLine > 40) {
+  if(rightLine > 150) {
     turnRight(speed);
-  } else if(rightLine <= 40 && rightLine > 35) {
+  } else if(rightLine <= 150 && rightLine > 55) {
     forward(speed); 
   } else {
-    if(leftLine <= 35) {
+    if(leftLine <= 55) {
       forward(0);
     } else {
       // delay(300);
@@ -215,7 +246,7 @@ void commandLineFollow() {
     lineFollow(55);
   }
   forward(55);
-  delay(100);
+  delay(200);
   forward(0);
 }
 
@@ -223,7 +254,7 @@ void commandTurnLeft() {
   int left = analogRead(LINE_FOLLOW_L);
   int right = analogRead(LINE_FOLLOW_R);
 
-  while(left <= 45) {
+  while(left <= 100) {
     left = analogRead(LINE_FOLLOW_L);
     digitalWrite(MOTOR_L1_PIN, HIGH);
     analogWrite(MOTOR_L2_PIN, 200);
@@ -238,7 +269,7 @@ void commandTurnRight() {
   int left = analogRead(LINE_FOLLOW_L);
   int right = analogRead(LINE_FOLLOW_R);
  
-  while(right <= 45) {
+  while(right <= 100) {
     right = analogRead(LINE_FOLLOW_R);
     digitalWrite(MOTOR_L1_PIN, LOW);
     analogWrite(MOTOR_L2_PIN, 55);
@@ -247,5 +278,17 @@ void commandTurnRight() {
   }
   delay(100);
   forward(0);
+}
+
+int searchIndexOf(String arr[], String str) {
+  int idx = 0;
+  for(int i = 0; i < commandIndex ; i++) {
+    if(arr[i] == str) {
+      idx = i;
+      break;
+    }
+  }
+
+  return idx;
 }
 
