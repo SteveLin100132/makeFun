@@ -1,8 +1,15 @@
 #include <SPI.h>
 #include <MFRC522.h>
 
+#define BUZZER_PIN 2
+#define MOTOR_L1_PIN 4
+#define MOTOR_L2_PIN 5
+#define MOTOR_R1_PIN 7
+#define MOTOR_R2_PIN 6
 #define RST_PIN 9           // Configurable, see typical pin layout above
 #define SS_PIN  10          // Configurable, see typical pin layout above
+#define LINE_FOLLOW_L A0
+#define LINE_FOLLOW_R A1
 
 int commandIndex = 0;
 String COMMAND[100];
@@ -12,9 +19,17 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance
 
 //*****************************************************************************************//
 void setup() {
-  pinMode(2, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(MOTOR_L1_PIN, OUTPUT);
+  pinMode(MOTOR_L2_PIN, OUTPUT);
+  pinMode(MOTOR_R1_PIN, OUTPUT);
+  pinMode(MOTOR_R2_PIN, OUTPUT);
+  pinMode(LINE_FOLLOW_L, INPUT);
+  pinMode(LINE_FOLLOW_R, INPUT);
+  
   Serial.begin(9600);                                           
   SPI.begin();                                                 
+  
   mfrc522.PCD_Init();                                           
   Serial.println(F("Read personal data on a MIFARE PICC:"));    
   
@@ -36,6 +51,8 @@ void loop() {
     commandIndex = 0;
     exec = false;
   }
+//  int line = analogRead(LINE_FOLLOW_L);
+//  Serial.println(line);
 }
 
 //*****************************************************************************************//
@@ -119,10 +136,13 @@ void readRFID() {
 void actionCardContent(int index) {
   if(COMMAND[index] == "forward") {
     Serial.println("forward done");
+    commandLineFollow();
   } else if(COMMAND[index] == "left") {
     Serial.println("left done");
+    commandTurnLeft();
   } else if(COMMAND[index] == "right") {
     Serial.println("right done");
+    commandTurnRight();
   } else if(COMMAND[index] == "repeat") {
     Serial.println("repeat done");
   } else if(COMMAND[index] == "break") {
@@ -140,7 +160,92 @@ void actionCardContent(int index) {
     Serial.println(F("Read personal data on a MIFARE PICC:"));  
   }
 
-  tone(2, 400, 500);
+  if(COMMAND[index] != "action") {
+    tone(2, 400, 500);    
+  }
   COMMAND[index] = "";
+}
+
+void forward(int speed) {
+  digitalWrite(MOTOR_L1_PIN, LOW);
+  analogWrite(MOTOR_L2_PIN, speed);
+  digitalWrite(MOTOR_R1_PIN, HIGH);
+  analogWrite(MOTOR_R2_PIN, 255 - speed);
+}
+
+void turnLeft(int speed) {
+  digitalWrite(MOTOR_L1_PIN, LOW);
+  analogWrite(MOTOR_L2_PIN, speed - 20);
+  digitalWrite(MOTOR_R1_PIN, HIGH);
+  analogWrite(MOTOR_R2_PIN, 255 - speed);
+}
+
+void turnRight(int speed) {
+  digitalWrite(MOTOR_L1_PIN, LOW);
+  analogWrite(MOTOR_L2_PIN, speed);
+  digitalWrite(MOTOR_R1_PIN, HIGH);
+  analogWrite(MOTOR_R2_PIN, 255 - (speed - 20));
+}
+
+void lineFollow(int speed) {
+  int leftLine = analogRead(LINE_FOLLOW_L);
+  int rightLine = analogRead(LINE_FOLLOW_R);
+  
+  if(rightLine > 40) {
+    turnRight(speed);
+  } else if(rightLine <= 40 && rightLine > 35) {
+    forward(speed); 
+  } else {
+    if(leftLine <= 35) {
+      forward(0);
+    } else {
+      // delay(300);
+      turnLeft(speed);    
+    }
+  }
+}
+
+void commandLineFollow() {
+  int left = analogRead(LINE_FOLLOW_L);
+  int right = analogRead(LINE_FOLLOW_R);
+ 
+  while(left > 35 || right > 35) {
+    left = analogRead(LINE_FOLLOW_L);
+    right = analogRead(LINE_FOLLOW_R);
+    lineFollow(55);
+  }
+  forward(55);
+  delay(100);
+  forward(0);
+}
+
+void commandTurnLeft() {
+  int left = analogRead(LINE_FOLLOW_L);
+  int right = analogRead(LINE_FOLLOW_R);
+
+  while(left <= 45) {
+    left = analogRead(LINE_FOLLOW_L);
+    digitalWrite(MOTOR_L1_PIN, HIGH);
+    analogWrite(MOTOR_L2_PIN, 200);
+    digitalWrite(MOTOR_R1_PIN, HIGH);
+    analogWrite(MOTOR_R2_PIN, 200);
+  }
+  delay(100);
+  forward(0);
+}
+
+void commandTurnRight() {
+  int left = analogRead(LINE_FOLLOW_L);
+  int right = analogRead(LINE_FOLLOW_R);
+ 
+  while(right <= 45) {
+    right = analogRead(LINE_FOLLOW_R);
+    digitalWrite(MOTOR_L1_PIN, LOW);
+    analogWrite(MOTOR_L2_PIN, 55);
+    digitalWrite(MOTOR_R1_PIN, LOW);
+    analogWrite(MOTOR_R2_PIN, 55);
+  }
+  delay(100);
+  forward(0);
 }
 
