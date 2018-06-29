@@ -28,8 +28,8 @@ void setup() {
   pinMode(LINE_FOLLOW_R, INPUT);
   
   Serial.begin(9600);                                           
-  SPI.begin();                                                 
-  
+  SPI.begin();    
+ 
   mfrc522.PCD_Init();                                           
   Serial.println(F("Read personal data on a MIFARE PICC:"));    
   
@@ -42,7 +42,10 @@ void setup() {
 void loop() {
   readRFID();
 
-//  Serial.println(analogRead(A0));
+//  Serial.print("Left: ");
+//  Serial.print(analogRead(A0));
+//  Serial.print(" Rightt: ");
+//  Serial.println(analogRead(A1));
 
   if(exec) {
     Serial.println("=====execute=====");
@@ -71,20 +74,18 @@ void loop() {
       }
 
       for(int i = 0; i < tempIndex4Repeat; i++) {
-        Serial.print(finalArray[i]);
-        Serial.print(", ");
+//        Serial.print(finalArray[i]);
+//        Serial.print(", ");
       }
-      Serial.println("");
+//      Serial.println("");
+      actionCardContent(finalArray, tempIndex4Repeat);
     } else {
-      for(int i = 0; i < commandIndex; i++) {
-        finalArray[i] = COMMAND[i];
-        Serial.print(finalArray[i]);
-        Serial.print(", ");
-      }
-      Serial.println(""); 
+      actionCardContent(COMMAND, commandIndex);
     }
 
-    actionCardContent(finalArray, sizeof(finalArray)/sizeof(finalArray[0]));
+    for(int i = 0; i < sizeof(finalArray)/sizeof(finalArray[0]) + 1; i++) {
+      Serial.println(COMMAND[i]);
+    }
   }
 }
 
@@ -169,6 +170,7 @@ void readRFID() {
 void actionCardContent(String command[], int commandLength) {
   Serial.println(commandLength);
   for(int i = 0; i < commandLength; i++) {
+    Serial.println(command[i]);
     if(command[i] == "forward") {
       Serial.println("forward done");
       commandLineFollow();
@@ -218,50 +220,54 @@ void turnRight(int speed) {
   analogWrite(MOTOR_R2_PIN, 255 - (speed - 20));
 }
 
-void lineFollow(int speed) {
+bool lineFollow(int speed) {
   int leftLine = analogRead(LINE_FOLLOW_L);
   int rightLine = analogRead(LINE_FOLLOW_R);
   
-  if(rightLine > 150) {
+  if(rightLine > 38) {
     turnRight(speed);
-  } else if(rightLine <= 150 && rightLine > 55) {
+  } else if(rightLine <= 38 && rightLine > 28) {
     forward(speed); 
   } else {
-    if(leftLine <= 55) {
+    if(leftLine <= 28) {
       forward(0);
+      return false;
     } else {
       // delay(300);
       turnLeft(speed);    
     }
   }
+
+  return true;
 }
 
 void commandLineFollow() {
   int left = analogRead(LINE_FOLLOW_L);
   int right = analogRead(LINE_FOLLOW_R);
- 
-  while(left > 35 || right > 35) {
+
+  while(lineFollow(55)) {
     left = analogRead(LINE_FOLLOW_L);
     right = analogRead(LINE_FOLLOW_R);
-    lineFollow(55);
+    Serial.println(left);
   }
   forward(55);
-  delay(200);
+  delay(100);  
   forward(0);
 }
 
 void commandTurnLeft() {
   int left = analogRead(LINE_FOLLOW_L);
   int right = analogRead(LINE_FOLLOW_R);
-
-  while(left <= 100) {
+  
+  while(right <= 35) {
     left = analogRead(LINE_FOLLOW_L);
+    right = analogRead(LINE_FOLLOW_R);
     digitalWrite(MOTOR_L1_PIN, HIGH);
     analogWrite(MOTOR_L2_PIN, 200);
     digitalWrite(MOTOR_R1_PIN, HIGH);
     analogWrite(MOTOR_R2_PIN, 200);
   }
-  delay(100);
+  delay(200);
   forward(0);
 }
 
@@ -269,14 +275,15 @@ void commandTurnRight() {
   int left = analogRead(LINE_FOLLOW_L);
   int right = analogRead(LINE_FOLLOW_R);
  
-  while(right <= 100) {
+  while(left <= 35) {
+    left = analogRead(LINE_FOLLOW_L);
     right = analogRead(LINE_FOLLOW_R);
     digitalWrite(MOTOR_L1_PIN, LOW);
     analogWrite(MOTOR_L2_PIN, 55);
     digitalWrite(MOTOR_R1_PIN, LOW);
     analogWrite(MOTOR_R2_PIN, 55);
   }
-  delay(100);
+  delay(200);
   forward(0);
 }
 
