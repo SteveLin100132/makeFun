@@ -168,7 +168,6 @@ void readRFID() {
 }
 
 void actionCardContent(String command[], int commandLength) {
-//  Serial.println(commandLength);
   for(int i = 0; i < commandLength; i++) {
     Serial.println(command[i]);
     if(command[i] == "forward") {
@@ -227,173 +226,79 @@ void turnRight(int speed) {
   analogWrite(MOTOR_R2_PIN, 255 - (speed - 30));
 }
 
-bool lineFollow(int speed) {
-  int leftLine = analogRead(LINE_FOLLOW_L);
-  int rightLine = analogRead(LINE_FOLLOW_R);
-
-  if(leftLine <= 26 && rightLine <= 26) {
-    forward(0);
-    return false;
-  } else if(rightLine <= 28) {
-    turnLeft(speed);
-  } else if(leftLine <= 28) {
-    turnRight(speed);
+void move(int leftSpeed, int rightSpeed) {
+  if(leftSpeed >= 0) {
+    digitalWrite(MOTOR_L1_PIN, LOW);
+    analogWrite(MOTOR_L2_PIN, leftSpeed);
   } else {
+    digitalWrite(MOTOR_L1_PIN, HIGH);
+    analogWrite(MOTOR_L2_PIN, 255 - leftSpeed * -1);
+  }
+
+  if(rightSpeed >= 0) {
+    digitalWrite(MOTOR_R1_PIN, HIGH);
+    analogWrite(MOTOR_R2_PIN, 255 - rightSpeed);
+  } else {
+    digitalWrite(MOTOR_R1_PIN, LOW);
+    analogWrite(MOTOR_R2_PIN, rightSpeed * -1);
+  }
+}
+
+bool lineFollow(int speed) {
+  if(getLineFollow() == 0) {
     forward(speed);
   }
 
+  if(getLineFollow() == 1) {
+    turnLeft(speed);
+  }
+
+  if(getLineFollow() == 2) {
+    turnRight(speed);
+  }
+
+  if(getLineFollow() == 3) {
+    forward(0);
+    return false;
+  }
+  
   return true;
 }
 
 void commandLineFollow() {
-  int left = analogRead(LINE_FOLLOW_L);
-  int right = analogRead(LINE_FOLLOW_R);
-
-  while(lineFollow(55)) {
-    left = analogRead(LINE_FOLLOW_L);
-    right = analogRead(LINE_FOLLOW_R);
-  }
-  forward(55);
-  delay(100);  
-  forward(0);
+  while(lineFollow(55)) {}
+  move(55, 55);
+  delay(100);
+  move(0, 0);
 }
 
 void commandTurnLeft() {
-  int left = analogRead(LINE_FOLLOW_L);
-  int right = analogRead(LINE_FOLLOW_R);
-
-  backward(55);
-  delay(100);
-  forward(0);
-  
-  while(left <= 35) {
-    left = analogRead(LINE_FOLLOW_L);
-    right = analogRead(LINE_FOLLOW_R);
-
-    if(left > 35) break;
-    
-    digitalWrite(MOTOR_L1_PIN, HIGH);
-    analogWrite(MOTOR_L2_PIN, 190);
-    digitalWrite(MOTOR_R1_PIN, HIGH);
-    analogWrite(MOTOR_R2_PIN, 190);
-
-    delay(25);
-    forward(0);
-    delay(25);
+  while(getLineFollow() != 0) {
+    move(0, 50);
   }
-  forward(0);
-
-  while(right <= 35) {
-    left = analogRead(LINE_FOLLOW_L);
-    right = analogRead(LINE_FOLLOW_R);
-
-    if(left > 35) break;
-    
-    digitalWrite(MOTOR_L1_PIN, HIGH);
-    analogWrite(MOTOR_L2_PIN, 190);
-    digitalWrite(MOTOR_R1_PIN, HIGH);
-    analogWrite(MOTOR_R2_PIN, 190);
-
-    delay(25);
-    forward(0);
-    delay(25);
-  }
-  forward(0);
-
-  while(left > 30) {
-    left = analogRead(LINE_FOLLOW_L);
-    right = analogRead(LINE_FOLLOW_R);
-
-    if(left <= 30) break;
-    
-    digitalWrite(MOTOR_L1_PIN, HIGH);
-    analogWrite(MOTOR_L2_PIN, 190);
-    digitalWrite(MOTOR_R1_PIN, HIGH);
-    analogWrite(MOTOR_R2_PIN, 190);
-
-    delay(25);
-    forward(0);
-    delay(25);
-  }
-  forward(0);
-
-  forward(55);
-  delay(200);
-  forward(0);
-
-  /*commandLineFollow();
-  forward(55);
-  delay(50);
-  forward(0);*/
+  move(0, 0);
 }
 
 void commandTurnRight() {
-  int left = analogRead(LINE_FOLLOW_L);
-  int right = analogRead(LINE_FOLLOW_R);
-
-  backward(55);
-  delay(100);
-  forward(0);
- 
-  while(right <= 35) {
-    left = analogRead(LINE_FOLLOW_L);
-    right = analogRead(LINE_FOLLOW_R);
-
-    if(right > 35) break;
-    
-    digitalWrite(MOTOR_L1_PIN, LOW);
-    analogWrite(MOTOR_L2_PIN, 65);
-    digitalWrite(MOTOR_R1_PIN, LOW);
-    analogWrite(MOTOR_R2_PIN, 65);
-    
-    delay(25);
-    forward(0);
-    delay(25);
+  while(getLineFollow() != 0) {
+    move(50, 0);
   }
-  forward(0);
+  move(0, 0);
+}
 
-  while(left <= 35) {
-    left = analogRead(LINE_FOLLOW_L);
-    right = analogRead(LINE_FOLLOW_R);
+int getLineFollow() {
+  int leftLine = analogRead(LINE_FOLLOW_L);
+  int rightLine = analogRead(LINE_FOLLOW_R);
 
-    if(right > 35) break;
-    
-    digitalWrite(MOTOR_L1_PIN, LOW);
-    analogWrite(MOTOR_L2_PIN, 65);
-    digitalWrite(MOTOR_R1_PIN, LOW);
-    analogWrite(MOTOR_R2_PIN, 65);
-
-    delay(25);
-    forward(0);
-    delay(25);
+  if(leftLine >= 100 && rightLine >= 100) {
+    return 0;
+  } else if(leftLine >= 100 && rightLine < 100) {
+    return 1;
+  } else if(leftLine < 100 && rightLine >= 100) {
+    return 2;
+  } else if(leftLine < 100 && rightLine < 100) {
+    return 3;
   }
-  forward(0);
-
-  while(right > 30) {
-    left = analogRead(LINE_FOLLOW_L);
-    right = analogRead(LINE_FOLLOW_R);
-
-    if(right <= 30) break;
-    
-    digitalWrite(MOTOR_L1_PIN, LOW);
-    analogWrite(MOTOR_L2_PIN, 65);
-    digitalWrite(MOTOR_R1_PIN, LOW);
-    analogWrite(MOTOR_R2_PIN, 65);
-
-    delay(25);
-    forward(0);
-    delay(25);
-  }
-  forward(0);
-  
-  forward(55);
-  delay(200);
-  forward(0);
-
-  /*commandLineFollow();
-  forward(55);
-  delay(50);
-  forward(0);*/
 }
 
 int searchIndexOf(String arr[], String str) {
