@@ -49,7 +49,62 @@ void loop() {
 
   if(exec) {
     Serial.println("=====execute=====");
-    int repeatIndex = searchIndexOf(COMMAND, "repeat");
+    while(searchIndexOf(COMMAND, "repeat") > -1) {
+      Serial.println("=====process=====");
+      int repeatIndex = searchIndexOf(COMMAND, "repeat");
+      int numberIndex = repeatIndex + 1;
+      int breakIndex = searchIndexOf(COMMAND, "break");
+  
+      String finalArray[repeatIndex + (COMMAND[numberIndex].toInt() * (breakIndex - numberIndex - 1)) + (commandIndex - breakIndex - 1)];
+      int tempIndex4Repeat = repeatIndex;
+
+      Serial.println("Step 1: get prefix");
+      for(int i = 0; i < repeatIndex; i++) {
+        finalArray[i] = COMMAND[i];
+        Serial.print(finalArray[i]);
+        Serial.print(", ");
+      }
+      Serial.println("");
+
+      Serial.println("Step 2: get repeat command");
+      for(int i = 0; i < COMMAND[numberIndex].toInt(); i++) {
+        for(int j = numberIndex + 1; j < breakIndex; j++) {
+          finalArray[tempIndex4Repeat] = COMMAND[j];
+          Serial.print(finalArray[tempIndex4Repeat]);
+          Serial.print(", ");
+          tempIndex4Repeat++;
+        }
+      }
+      Serial.println("");
+
+      Serial.println("Step 3: get remain");
+      for(int i = breakIndex + 1; i < commandIndex; i++) {
+        finalArray[tempIndex4Repeat] = COMMAND[i];
+        Serial.print(finalArray[tempIndex4Repeat]);
+        Serial.print(", ");
+        tempIndex4Repeat++;
+      }
+      Serial.println("");
+
+      Serial.println("Step 4: clear COMMAND");
+      for(int i = 0; i < commandIndex; i++) {
+        COMMAND[i] = "";
+      }
+
+      for(int i = 0; i < tempIndex4Repeat; i++) {
+        COMMAND[i] = finalArray[i];
+      }
+
+      Serial.println("Result: ");
+      for(int i = 0; i < tempIndex4Repeat; i++) {
+        Serial.print(COMMAND[i]);
+        Serial.print(", ");
+      }
+      Serial.println("");
+    }
+    actionCardContent(COMMAND, commandIndex);
+    
+    /* int repeatIndex = searchIndexOf(COMMAND, "repeat");
     int numberIndex = repeatIndex + 1;
     int breakIndex = searchIndexOf(COMMAND, "break");
 
@@ -74,18 +129,19 @@ void loop() {
       }
 
       for(int i = 0; i < tempIndex4Repeat; i++) {
-        Serial.print(finalArray[i]);
+        COMMAND[i] = finalArray[i];
+        Serial.print(COMMAND[i]);
         Serial.print(", ");
       }
       Serial.println("");
       actionCardContent(finalArray, tempIndex4Repeat);
     } else {
       actionCardContent(COMMAND, commandIndex);
-    }
+    } */
 
-    for(int i = 0; i < sizeof(finalArray)/sizeof(finalArray[0]) + 1; i++) {
+    /* for(int i = 0; i < sizeof(finalArray)/sizeof(finalArray[0]) + 1; i++) {
       Serial.println(COMMAND[i]);
-    }
+    } */
   }
 }
 
@@ -289,20 +345,21 @@ void commandTurnRight() {
 int getLineFollow() {
   int leftLine = analogRead(LINE_FOLLOW_L);
   int rightLine = analogRead(LINE_FOLLOW_R);
+  int threshold = 200;
 
-  if(leftLine >= 100 && rightLine >= 100) {
+  if(leftLine >= threshold && rightLine >= threshold) {
     return 0;
-  } else if(leftLine >= 100 && rightLine < 100) {
+  } else if(leftLine >= threshold && rightLine < threshold) {
     return 1;
-  } else if(leftLine < 100 && rightLine >= 100) {
+  } else if(leftLine < threshold && rightLine >= threshold) {
     return 2;
-  } else if(leftLine < 100 && rightLine < 100) {
+  } else if(leftLine < threshold && rightLine < threshold) {
     return 3;
   }
 }
 
 int searchIndexOf(String arr[], String str) {
-  int idx = 0;
+  int idx = -1;
   for(int i = 0; i < commandIndex ; i++) {
     if(arr[i] == str) {
       idx = i;
