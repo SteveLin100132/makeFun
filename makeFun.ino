@@ -12,12 +12,11 @@
 #define LINE_FOLLOW_R A1
 
 int commandIndex = 0;
-String COMMAND[100];
+String COMMAND[50];
 bool exec = false;
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance
 
-//*****************************************************************************************//
 void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
   pinMode(MOTOR_L1_PIN, OUTPUT);
@@ -33,29 +32,31 @@ void setup() {
   mfrc522.PCD_Init();                                           
   Serial.println(F("Read personal data on a MIFARE PICC:"));    
   
-  for(int i=0;i<100;i++) {
-    COMMAND[i] = "";
+  for(int i = 0; i < 50; i++) {
+    COMMAND[i] = ""; 
   }
 }
 
-//*****************************************************************************************//
 void loop() {  
-  /*
-  Serial.print(analogRead(A0));
-  Serial.print("\t");
-  Serial.println(analogRead(A1));
-  */
   readRFID();
 
   if(exec) {
+    int commandLength = 0;
+    if(searchIndexOf(COMMAND, "repeat") > -1) {
+      commandLength = 0;
+    } else {
+      commandLength = commandIndex;
+    }
+
     Serial.println("=====execute=====");
+    String finalArray[50];
     while(searchIndexOf(COMMAND, "repeat") > -1) {
       Serial.println("=====process=====");
       int repeatIndex = searchIndexOf(COMMAND, "repeat");
       int numberIndex = repeatIndex + 1;
       int breakIndex = searchIndexOf(COMMAND, "break");
   
-      String finalArray[repeatIndex + (COMMAND[numberIndex].toInt() * (breakIndex - numberIndex - 1)) + (commandIndex - breakIndex - 1)];
+      // String finalArray[repeatIndex + (COMMAND[numberIndex].toInt() * (breakIndex - numberIndex - 1)) + (commandIndex - breakIndex - 1)];
       int tempIndex4Repeat = repeatIndex;
 
       Serial.println("Step 1: get prefix");
@@ -90,89 +91,47 @@ void loop() {
       for(int i = 0; i < commandIndex; i++) {
         COMMAND[i] = "";
       }
-
+      
+      Serial.println("Step 5: print Final");
       for(int i = 0; i < tempIndex4Repeat; i++) {
-        COMMAND[i] = finalArray[i];
-      }
-
-      Serial.println("Result: ");
-      for(int i = 0; i < tempIndex4Repeat; i++) {
-        Serial.print(COMMAND[i]);
+        Serial.print(finalArray[i]);
         Serial.print(", ");
       }
       Serial.println("");
+
+      commandLength = tempIndex4Repeat;
+      for(int i = 0; i < tempIndex4Repeat; i++) {
+        COMMAND[i] = finalArray[i];
+      }
     }
-    actionCardContent(COMMAND, commandIndex);
-    
-    /* int repeatIndex = searchIndexOf(COMMAND, "repeat");
-    int numberIndex = repeatIndex + 1;
-    int breakIndex = searchIndexOf(COMMAND, "break");
-
-    String finalArray[repeatIndex + (COMMAND[numberIndex].toInt() * (breakIndex - numberIndex - 1)) + (commandIndex - breakIndex - 1)];
-    int tempIndex4Repeat = repeatIndex;
-
-    if(breakIndex != 0) {
-      for(int i = 0; i < repeatIndex; i++) {
-        finalArray[i] = COMMAND[i];
-      }
-
-      for(int i = 0; i < COMMAND[numberIndex].toInt(); i++) {
-        for(int j = numberIndex + 1; j < breakIndex; j++) {
-          finalArray[tempIndex4Repeat] = COMMAND[j];
-          tempIndex4Repeat++;
-        }
-      }
-  
-      for(int i = breakIndex + 1; i < commandIndex; i++) {
-        finalArray[tempIndex4Repeat] = COMMAND[i];
-        tempIndex4Repeat++;
-      }
-
-      for(int i = 0; i < tempIndex4Repeat; i++) {
-        COMMAND[i] = finalArray[i];
-        Serial.print(COMMAND[i]);
-        Serial.print(", ");
-      }
-      Serial.println("");
-      actionCardContent(finalArray, tempIndex4Repeat);
-    } else {
-      actionCardContent(COMMAND, commandIndex);
-    } */
-
-    /* for(int i = 0; i < sizeof(finalArray)/sizeof(finalArray[0]) + 1; i++) {
-      Serial.println(COMMAND[i]);
-    } */
+    Serial.print("Result(");
+    Serial.print(commandLength);
+    Serial.println("): ");
+    for(int i = 0; i < commandLength; i++) {
+      Serial.print(COMMAND[i]);
+      Serial.print(", ");
+    }
+    Serial.println("");
+    Serial.println("====terminate====");
+    actionCardContent(COMMAND, commandLength);
   }
 }
 
-//*****************************************************************************************//
 void readRFID() {
-  // Prepare key - all keys are set to FFFFFFFFFFFFh at chip delivery from the factory.
   MFRC522::MIFARE_Key key;
   for (byte i = 0; i < 6; i++) key.keyByte[i] = 0xFF;
 
-  
   byte block;
   byte len;
   MFRC522::StatusCode status;
 
-  //-------------------------------------------
-
-  // Look for new cards
   if (! mfrc522.PICC_IsNewCardPresent()) {
     return;
   }
 
-  // Select one of the cards
   if (! mfrc522.PICC_ReadCardSerial()) {
     return;
   }
-
-  //-------------------------------------------
-
-  // mfrc522.PICC_DumpDetailsToSerial(&(mfrc522.uid)); //dump some details about the card
-
-  //-------------------------------------------
 
   byte buffer1[18];
 
@@ -195,17 +154,16 @@ void readRFID() {
   }
 
   String currentRead = "";
-  //PRINT FIRST NAME
   for (uint8_t i = 0; i < 16; i++) {        
     if (buffer1[i] != 32) {
       char value = buffer1[i];
       if(buffer1[i] != 10 && buffer1[i] != 13) {
         currentRead += value;
-        COMMAND[commandIndex] += value;    
+        COMMAND[commandIndex] += value;
       }
     }
   }
-  // Serial.println(COMMAND[commandIndex]);
+  
   commandIndex++;
   Serial.print("Command: ");
   Serial.println(currentRead);
@@ -214,9 +172,6 @@ void readRFID() {
     exec = true;
   }
  
-  //----------------------------------------
-
-  // delay(1000); //change value if you want to read cards faster
   tone(2, 1000, 100);
 
   mfrc522.PICC_HaltA();
@@ -225,7 +180,7 @@ void readRFID() {
 
 void actionCardContent(String command[], int commandLength) {
   for(int i = 0; i < commandLength; i++) {
-    Serial.println(command[i]);
+    // Serial.println(command[i]);
     if(command[i] == "forward") {
       Serial.println("forward done");
       commandLineFollow();
@@ -247,7 +202,7 @@ void actionCardContent(String command[], int commandLength) {
     delay(1000);
   }
 
-  for(int i = 0; i < commandIndex; i++) {
+  for(int i = 0; i < commandLength; i++) {
     COMMAND[i] = "";
   }
   commandIndex = 0;
