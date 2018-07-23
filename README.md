@@ -6,7 +6,7 @@
 
 此為一款開源桌遊，目的是讓老師以及學生，實際動手做，體會Maker與STEAM的精神，而桌遊的所有資源，從自走循跡車、RFID圖卡、桌遊軌道以及場地皆提供檔案，歡迎自行下載，並動手DIY。
 
-![](/resource/image/makeFun banner.svg)
+![](https://github.com/SteveLin100132/makeFun/blob/master/resource/image/makeFun%20banner.svg)
 
 ---
 
@@ -24,8 +24,8 @@
 
 #### 感應軌道
 
-![](/resource/image/makeFun line.svg)
+![](https://github.com/SteveLin100132/makeFun/blob/master/resource/image/makeFun%20line.svg)
 
 #### RFID 指令卡牌
 
-![](/resource/image/card collections.svg)
+![](https://github.com/SteveLin100132/makeFun/blob/master/resource/image/card%20collections.svg)
